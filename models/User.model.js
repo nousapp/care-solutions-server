@@ -15,7 +15,7 @@ const ErrorWithHttpStatus = require('../utils/ErrorWithHttpStatus');
  * @typedef {Object} User
  * @property {string} acl
  * @property {string} UserCode
- * @property {string} UserName
+ * @property {string} Username
  */ 
 
 
@@ -24,21 +24,28 @@ const ErrorWithHttpStatus = require('../utils/ErrorWithHttpStatus');
  * @description: Handles all actions for account information.
  * @param {string} username
  * @param {string} password
- * @param {string} firstName
- * @param {string} lastName
+ * @param {string} firstname
+ * @param {string} lastname
  * @param {string} role
  */
-exports.registerUser =  async ({ username, password, firstName, lastName, role }) => {
+exports.registerUser =  async ({ username, password, firstname, lastname, role }) => {
   try {
     // Checks if all inputs are in request
-    if(!username || !password || !firstName || !lastName || !role){
+    if(!username || !password || !firstname || !lastname || !role){
       throw new ErrorWithHttpStatus('Missing Properties', 400);
     }
     if (await userExists(username)) {
       throw new ErrorWithHttpStatus('User already exists.', 400);
     }
+    ////Hash password function
+    /*
     const { hash, salt } = await hashPassword(password);
-    await createUser(username, hash, salt, firstName, lastName, role);
+    await createUser(username, hash, salt, firstname, lastname, role);
+    */
+    //Insecure create user with password!
+    
+    const salt = 'N/A';
+    await createUser(username, password, salt, firstname, lastname, role);
     return 'User Succesfully Created'
   } catch (err) {
     if (err instanceof ErrorWithHttpStatus) throw err;
@@ -62,9 +69,9 @@ exports.loginUser = async ({ username, password}) => {
     if (!(await userExists(username))) {
       throw new ErrorWithHttpStatus('User does not exists.', 400);
     }
-    const { uuid, fullName } = await checkPassword(username, password);
-    const token = await createToken(uuid, fullName);
-    await storeToken(uuid, token);
+    const { id, user_id } = await checkPassword(username, password);
+    const token = await createToken(id, user_id);
+    await storeToken(id, token);
     return token;
   } catch (err) {
     if (err instanceof ErrorWithHttpStatus) throw err;
@@ -97,7 +104,7 @@ exports.select = async ( query = {} ) => {
       .join(' AND ');
     // Handle Format String
     const formattedSelect = format(
-      `SELECT _id, username, LastName, FirstName, MiddleName, SortName, Role, _updatedAt FROM dbo.users ${clauses.length ? `WHERE ${clauses}` : ''}`,
+      `SELECT id, user_id, lastname, firstname, middlename, sortname, role, updated_date FROM dbo.users ${clauses.length ? `WHERE ${clauses}` : ''}`,
       ...Object.keys(query)  
     );
     // Pass in Query
@@ -148,7 +155,7 @@ exports.update = async (id, newData) => {
     var params = [];
     // Handle Update Time Input
     reqPool.input('updateTime', dateInput);
-    params.push(`_updatedAt = @updateTime`);
+    params.push(`updated_date = @updateTime`);
     // Handle inputs from body
     for(var i = 1; i <= keys.length ; i++) {
       // Handle Password coming in
@@ -176,7 +183,7 @@ exports.update = async (id, newData) => {
     // Get updated Transaction
     let result = await pool.request()
       .input('id', db.NVarChar(100), id)
-      .query( `SELECT _id, username, LastName, FirstName, MiddleName, SortName, Role, _updatedAt FROM dbo.users WHERE _id = @id`);
+      .query( `SELECT _id, username, lastname, firstname, middlename, sortname, role, updated_date FROM dbo.users WHERE _id = @id`);
 
     db.close();
     return result.recordset;
@@ -201,7 +208,7 @@ exports.delete = async id => {
     // Get created Transaction
     let result = await pool.request()
       .input('id', db.NVarChar(100), id)
-      .query( `SELECT  _id, username, LastName, FirstName, MiddleName, SortName, Role, _updatedAt FROM dbo.users WHERE _id = @id`);
+      .query( `SELECT  _id, username, lastname, firstname, middlename, sortname, role, updated_date FROM dbo.users WHERE _id = @id`);
     
     if (result.recordset.length == 0) {
       throw new ErrorWithHttpStatus('ID Does not exist', 400);

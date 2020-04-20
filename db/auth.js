@@ -20,14 +20,14 @@ async function userExists(username) {
     reqPool.input(0, username);
     // Handle Format String
     const formattedSelect = format(
-      `SELECT username FROM dbo.users WHERE username = @0`
+      `SELECT user_id FROM dbo.users WHERE user_id = @0`
     );
     // Pass in Query
     let result = await reqPool.query(formattedSelect);
     db.close();
     return result.recordset.length !== 0;
   } catch (err) {
-    
+    db.close();
     throw err;
   }
 }
@@ -59,23 +59,27 @@ async function createUser(Username, Password, Salt, FirstName, LastName, Role) {
     await pool.request()
       .input('id', db.NVarChar(100), idInput)
       .input('createTime', dateInput)
-      .input('username', db.NVarChar(100), Username)
+      .input('user_id', db.NVarChar(100), Username)
       .input('password', db.NVarChar(100), Password)
-      .input('salt', db.NVarChar(100), Salt)
+      // Salt taken out because there is no hashed password
+      //.input('salt', db.NVarChar(100), Salt)
       .input('firstName', db.NVarChar(100), FirstName)
       .input('lastName', db.NVarChar(100), LastName)
       .input('sortName', db.NVarChar(100), SortName)
       .input('role', db.NVarChar(100), Role)
-      .query(`INSERT INTO dbo.users (_id, _createdAt, _updatedAt, username, password, salt, FirstName, LastName, SortName, role) VALUES (@id, @createTime, @createTime, @username, @password, @salt, @firstName, @lastName, @sortName, @role);`);
+      .query(`INSERT INTO dbo.users (id, created_date, updated_date, user_id, password, firstname, lastname, sortname, role) VALUES (@id, @createTime, @createTime, @user_id, @password, @firstName, @lastName, @sortName, @role);`);
+      //// Query with salt
+      //.query(`INSERT INTO dbo.users (id, created_date, updated_date, user_id, password, salt, firstname, lastname, sortname, role) VALUES (@id, @createTime, @createTime, @user_id, @password, @salt, @firstName, @lastName, @sortName, @role);`);
     
     // Get created Transaction
     let result = await pool.request()
       .input('id', db.NVarChar(100), idInput)
-      .query( `SELECT * FROM dbo.users WHERE _id = @id`);
+      .query( `SELECT * FROM dbo.users WHERE id = @id`);
     
     db.close();
     return result.recordset;
   } catch (err) {
+    db.close();
     throw err;
   }
 }
@@ -100,18 +104,18 @@ async function storeToken(id, Token) {
     reqPool.input('updateTime', dateInput);
     reqPool.input('token', Token);
     reqPool.input('id', db.NVarChar(100), id);
-    var queryText = `UPDATE dbo.users SET _updatedAt = @updateTime, token = @Token WHERE _id = @id;`;
+    var queryText = `UPDATE dbo.users SET updated_date = @updateTime, token = @Token WHERE id = @id;`;
     
     await reqPool.query(queryText);
-
     // Get updated Transaction
     let result = await pool.request()
       .input('id', db.NVarChar(100), id)
-      .query( `SELECT * FROM dbo.transactions WHERE _id = @id`);
+      .query( `SELECT * FROM dbo.transactions WHERE id = @id`);
 
     db.close();
     return result.recordset;
   } catch (err) {
+    db.close();
     throw err;
   }
 }
@@ -132,7 +136,7 @@ async function getUserPrivate(username) {
     reqPool.input(0, username);
     // Handle Format String
     const formattedSelect = format(
-      `SELECT _id, username, salt, password FROM dbo.users WHERE username = @0`
+      `SELECT id, user_id, salt, password FROM dbo.users WHERE user_id = @0`
     );
     // Pass in Query
     let result = await reqPool.query(formattedSelect);
@@ -146,4 +150,34 @@ async function getUserPrivate(username) {
 }
 
 
-module.exports = { userExists, createUser, storeToken, getUserPrivate };
+/**
+ * Gets a user with an username INCLUDING password
+ * @description Gets all of a user's data.
+ * @param {string} username
+ * @returns {object} An object containing hash and salt
+ */
+async function getUserPrivateNoSalt(username) {
+  try {
+    // MSSQL METHOD
+    // Initiate Request
+    const pool = await db.connect(`${process.env.DATABASE_URL}`);
+    let reqPool = await pool.request() 
+    // Handle Query Values
+    reqPool.input(0, username);
+    // Handle Format String
+    const formattedSelect = format(
+      `SELECT id, user_id, password FROM dbo.users WHERE user_id = @0`
+    );
+    // Pass in Query
+    let result = await reqPool.query(formattedSelect);
+    db.close();
+    return result.recordset[0];
+  } catch (err) {
+    db.close();
+    if (err instanceof ErrorWithHttpStatus) throw err;
+    else throw new ErrorWithHttpStatus('Database Error', 500);
+  }
+}
+
+
+module.exports = { userExists, createUser, storeToken, getUserPrivate, getUserPrivateNoSalt };
