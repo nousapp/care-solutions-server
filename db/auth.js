@@ -20,7 +20,7 @@ async function userExists(username) {
     reqPool.input(0, username);
     // Handle Format String
     const formattedSelect = format(
-      `SELECT user_id FROM dbo.users WHERE user_id = @0`
+      `SELECT username FROM dbo.users WHERE username = @0`
     );
     // Pass in Query
     let result = await reqPool.query(formattedSelect);
@@ -59,7 +59,7 @@ async function createUser(Username, Password, Salt, FirstName, LastName, Role) {
     await pool.request()
       .input('id', db.NVarChar(100), idInput)
       .input('createTime', dateInput)
-      .input('user_id', db.NVarChar(100), Username)
+      .input('username', db.NVarChar(100), Username)
       .input('password', db.NVarChar(100), Password)
       // Salt taken out because there is no hashed password
       //.input('salt', db.NVarChar(100), Salt)
@@ -67,9 +67,9 @@ async function createUser(Username, Password, Salt, FirstName, LastName, Role) {
       .input('lastName', db.NVarChar(100), LastName)
       .input('sortName', db.NVarChar(100), SortName)
       .input('role', db.NVarChar(100), Role)
-      .query(`INSERT INTO dbo.users (id, created_date, updated_date, user_id, password, firstname, lastname, sortname, role) VALUES (@id, @createTime, @createTime, @user_id, @password, @firstName, @lastName, @sortName, @role);`);
+      .query(`INSERT INTO dbo.users (id, created_date, updated_date, username, password, firstname, lastname, sortname, role) VALUES (@id, @createTime, @createTime, @username, @password, @firstName, @lastName, @sortName, @role);`);
       //// Query with salt
-      //.query(`INSERT INTO dbo.users (id, created_date, updated_date, user_id, password, salt, firstname, lastname, sortname, role) VALUES (@id, @createTime, @createTime, @user_id, @password, @salt, @firstName, @lastName, @sortName, @role);`);
+      //.query(`INSERT INTO dbo.users (id, created_date, updated_date, username, password, salt, firstname, lastname, sortname, role) VALUES (@id, @createTime, @createTime, @username, @password, @salt, @firstName, @lastName, @sortName, @role);`);
     
     // Get created Transaction
     let result = await pool.request()
@@ -136,7 +136,7 @@ async function getUserPrivate(username) {
     reqPool.input(0, username);
     // Handle Format String
     const formattedSelect = format(
-      `SELECT id, user_id, salt, password FROM dbo.users WHERE user_id = @0`
+      `SELECT id, username, salt, password FROM dbo.users WHERE username = @0`
     );
     // Pass in Query
     let result = await reqPool.query(formattedSelect);
@@ -166,7 +166,7 @@ async function getUserPrivateNoSalt(username) {
     reqPool.input(0, username);
     // Handle Format String
     const formattedSelect = format(
-      `SELECT id, user_id, password FROM dbo.users WHERE user_id = @0`
+      `SELECT id, username, password FROM dbo.users WHERE username = @0`
     );
     // Pass in Query
     let result = await reqPool.query(formattedSelect);

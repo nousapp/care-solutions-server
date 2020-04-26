@@ -17,7 +17,6 @@ const pool = new sql.ConnectionPool({
 })
 
 pool.connect(err => {
-  console.log(err);
   if (err instanceof ErrorWithHttpStatus) throw err;
   else throw new ErrorWithHttpStatus('Database Error', 500);
 })

@@ -45,12 +45,12 @@ exports.insert = async ({ FirstName, MiddleName, LastName, SortName, Room, Resid
       .input('sortName', db.NVarChar(100), SortName)
       .input('room', db.NVarChar(10), Room)
       .input('resId', db.NVarChar(100), ResidentId)
-      .query(`INSERT INTO dbo.resident (_id, _createdAt, _updatedAt, LastName, FirstName, MiddleName, SortName, Room, ResidentId) VALUES (@id, @createTime, @createTime, @lastName, @firstName, @middleName, @sortName, @room, @resId);`);
+      .query(`INSERT INTO dbo.residents (id, created_date, updated_date, lastname, firstname, middlename, sortname, room, resident_id) VALUES (@id, @createTime, @createTime, @lastName, @firstName, @middleName, @sortName, @room, @resId);`);
     
     // Get created Resident
     let result = await pool.request()
       .input('id', db.NVarChar(100), idInput)
-      .query( `SELECT * FROM dbo.resident WHERE _id = @id`);
+      .query( `SELECT * FROM dbo.residents WHERE id = @id`);
     
     db.close();
     return result.recordset;
@@ -75,20 +75,26 @@ exports.select = async ( query = {} ) => {
     // MSSQL METHOD
     // Initiate Request
     const pool = await db.connect(`${process.env.DATABASE_URL}`);
+    let formattedSelect = '';
     let reqPool = await pool.request() 
-    // Handle Query Values
-    Object.values(query).forEach(async (value, index) => {
-      reqPool.input(index, value);
-    })
-    // Handle Query Keys
-    const clauses = Object.keys(query)
-      .map((key,i) => `%I = @${i}`)
-      .join(' AND ');
-    // Handle Format String
-    const formattedSelect = format(
-      `SELECT * FROM dbo.resident ${clauses.length ? `WHERE ${clauses}` : ''}`,
-      ...Object.keys(query)  
-    );
+    if (!query.wildcard){
+      // Handle Query Values
+      Object.values(query).forEach(async (value, index) => {
+        reqPool.input(index, value);
+      })
+      // Handle Query Keys
+      const clauses = Object.keys(query)
+        .map((key,i) => `%I = @${i}`)
+        .join(' AND ');
+      // Handle Format String
+      formattedSelect = format(
+        `SELECT * FROM dbo.residents ${clauses.length ? `WHERE ${clauses}` : ''}`,
+        ...Object.keys(query)  
+      );
+    } else {
+      reqPool.input('wildSort', query.wildcard)
+      formattedSelect = `SELECT * FROM dbo.residents WHERE sortname LIKE @wildSort +'%'`;
+    }
     // Pass in Query
     let result = await reqPool.query(formattedSelect);
     db.close();
@@ -135,20 +141,19 @@ exports.update = async (id, newData) => {
     // Handle ID input
     reqPool.input('id', db.NVarChar(100), id);
 
-    var queryText = `UPDATE dbo.resident SET ` + params.join(', ') + ` WHERE _id = @id;`;
+    var queryText = `UPDATE dbo.residents SET ` + params.join(', ') + ` WHERE id = @id;`;
     
     await reqPool.query(queryText);
 
     // Get updated Resident
     let result = await pool.request()
       .input('id', db.NVarChar(100), id)
-      .query( `SELECT * FROM dbo.resident WHERE _id = @id`);
+      .query( `SELECT * FROM dbo.residents WHERE id = @id`);
 
     db.close();
     return result.recordset;
   } catch(err) {
     db.close()
-    console.log(err);
     if (err instanceof ErrorWithHttpStatus) throw err;
     else throw new ErrorWithHttpStatus('Database Error', 500);
   }
@@ -168,14 +173,14 @@ exports.delete = async id => {
     // Get created Resident
     let result = await pool.request()
       .input('id', db.NVarChar(100), id)
-      .query( `SELECT * FROM dbo.resident WHERE _id = @id`);
+      .query( `SELECT * FROM dbo.residents WHERE id = @id`);
     
     if (result.recordset.length == 0) {
       throw new ErrorWithHttpStatus('ID Does not exist', 400);
     }
     await pool.request()
       .input('id', db.NVarChar(100), id)
-      .query(`DELETE FROM dbo.resident WHERE _id = @id`);
+      .query(`DELETE FROM dbo.residents WHERE id = @id`);
     db.close(); 
     return result.recordset[0];
   } catch (err) {

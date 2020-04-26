@@ -1,4 +1,7 @@
+const validate = require('validate.js');
 const Resident = require('../models/Resident.model');
+const { wildcardConstraints } = require('../validations/residentValidations');
+const ErrorWithHttpStatus = require('../utils/ErrorWithHttpStatus');
 
 // Create
 exports.createResident = async (req, res, next) => {
@@ -13,9 +16,17 @@ exports.createResident = async (req, res, next) => {
 // Read
 exports.getResidents = async ({ query }, res, next) => {
   try {
-    // 1.get data from Residents model
+    // 1. Check for wildcard
+    if(query.wildcard){
+      // Validate wildcard
+      const result = validate({wildcard: query.wildcard}, wildcardConstraints)
+      if (result !== undefined){
+        throw new ErrorWithHttpStatus('Invalid data received.', 400);
+      }
+    }
+    // 2. Get data from Residents model
     const residents = await Resident.select(query);
-    // 2. send that out
+    // 3. send that out
     res.send(residents);
   } catch (err) {
     next(err);

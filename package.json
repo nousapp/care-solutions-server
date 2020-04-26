@@ -29,7 +29,8 @@
     "nodemon": "^1.19.2",
     "pg": "^7.12.1",
     "pg-format": "^1.0.4",
-    "shortid": "^2.2.15"
+    "shortid": "^2.2.15",
+    "validate.js": "^0.13.1"
   },
   "devDependencies": {}
 }

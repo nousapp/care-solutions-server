@@ -61,22 +61,23 @@ exports.registerUser =  async ({ username, password, firstname, lastname, role }
  * @returns {string} JWT Token
  */
 exports.loginUser = async ({ username, password}) => {
+  const Username = username;
   try {
     // Checks if all inputs are in request
-    if(!username || !password){
+    if(!Username || !password){
       throw new ErrorWithHttpStatus('Missing Properties', 400);
     }
-    if (!(await userExists(username))) {
+    if (!(await userExists(Username))) {
       throw new ErrorWithHttpStatus('User does not exists.', 400);
     }
-    const { id, user_id } = await checkPassword(username, password);
-    const token = await createToken(id, user_id);
+    const { id, username } = await checkPassword(Username, password);
+    const token = await createToken(id, username);
     await storeToken(id, token);
     return token;
   } catch (err) {
     if (err instanceof ErrorWithHttpStatus) throw err;
     else throw new ErrorWithHttpStatus('Database Error', 500);
-  } 
+  };
 }
 
 /* Read */
@@ -104,7 +105,7 @@ exports.select = async ( query = {} ) => {
       .join(' AND ');
     // Handle Format String
     const formattedSelect = format(
-      `SELECT id, user_id, lastname, firstname, middlename, sortname, role, updated_date FROM dbo.users ${clauses.length ? `WHERE ${clauses}` : ''}`,
+      `SELECT id, username, lastname, firstname, middlename, sortname, role, updated_date FROM dbo.users ${clauses.length ? `WHERE ${clauses}` : ''}`,
       ...Object.keys(query)  
     );
     // Pass in Query

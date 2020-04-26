@@ -141,7 +141,6 @@ exports.update = async (id, newData) => {
     return result.recordset;
   } catch(err) {
     db.close()
-    console.log(err);
     if (err instanceof ErrorWithHttpStatus) throw err;
     else throw new ErrorWithHttpStatus('Database Error', 500);
   }
