@@ -10,6 +10,7 @@ const {
   updateTransaction,
   deleteTransactionById,
   getTransactions,
+  getRecentTransactions,
 } = require('../controllers/Transaction.controller');
 const {
   createService,
@@ -43,6 +44,7 @@ router.delete('/api/residents/:id', deleteResidentById);
 // GET /api/transactions
 router.post('/api/transactions', createTransaction);
 router.get('/api/transactions', getTransactions);
+router.get('/api/transactions/recent', getRecentTransactions);
 router.patch('/api/transactions/:id', updateTransaction);
 router.delete('/api/transactions/:id', deleteTransactionById);
 

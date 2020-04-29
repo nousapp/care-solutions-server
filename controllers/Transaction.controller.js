@@ -22,6 +22,18 @@ exports.getTransactions = async ({ query }, res, next) => {
   }
 };
 
+// Read Past 7 Days
+exports.getRecentTransactions = async ({ query }, res, next) => {
+  try {
+    // 1.get data from Transactions model
+    const transactions = await Transaction.selectRecent(query);
+    // 2. send that out
+    res.send(transactions);
+  } catch (err) {
+    next(err);
+  }
+};
+
 // Update
 exports.updateTransaction = async (req, res, next) => {
   try {

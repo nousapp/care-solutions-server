@@ -1,5 +1,4 @@
 require('dotenv').config();
-const shortid = require('shortid');
 const format = require('pg-format');
 const ErrorWithHttpStatus = require('../utils/ErrorWithHttpStatus');
 // const db = require('../db/index')
@@ -87,6 +86,45 @@ exports.select = async ( query = {} ) => {
     // Handle Format String
     const formattedSelect = format(
       `SELECT TOP 1500 * FROM dbo.transactions ${clauses.length ? `WHERE ${clauses}` : ''} ORDER BY trans_date DESC`,
+      ...Object.keys(query)  
+    );
+    // Pass in Query
+    let result = await reqPool.query(formattedSelect);
+    db.close();
+    return result.recordset;
+  } catch (err) {
+    db.close();
+    if (err instanceof ErrorWithHttpStatus) throw err;
+    else throw new ErrorWithHttpStatus('Database Error', 500);
+  }
+};
+
+/* Read Past 7 Days*/
+/**
+ * Selects transactions from db.
+ * Can accept optional query object to filter results.
+ * Otherwise returns all transactions
+ * @param {Object} {query}
+ * @returns {Promise<Object[]>}
+ */
+// CODE FOR QUERIES
+exports.selectRecent = async ( query = {} ) => {
+  try {
+    // MSSQL METHOD
+    // Initiate Request
+    const pool = await db.connect(`${process.env.DATABASE_URL}`);
+    let reqPool = await pool.request() 
+    // Handle Query Values
+    Object.values(query).forEach(async (value, index) => {
+      reqPool.input(index, value);
+    })
+    // Handle Query Keys
+    const clauses = Object.keys(query)
+      .map((key,i) => `%I = @${i}`)
+      .join(' AND ');
+    // Handle Format String
+    const formattedSelect = format(
+      `SELECT TOP 1500 * FROM dbo.transactions WHERE trans_date >= DateAdd(Day, DateDiff(Day, 0, GetDate()) - 7, 0) ${clauses.length ? `AND ${clauses}` : ''} ORDER BY trans_date DESC`,
       ...Object.keys(query)  
     );
     // Pass in Query
