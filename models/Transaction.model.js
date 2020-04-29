@@ -22,32 +22,35 @@ const db = require('mssql');
  * @param {Transaction} newTransaction - the data to create the Transaction with
  * @returns {Promise<Transaction>} the created Transaction
  */
-exports.insert = async ({ServiceCode, ServicedBy, TransDate, ResidentId }) => {
+exports.insert = async ({service_code, username, trans_date, resident_id }) => {
   try {
     // Checks if all inputs are in request
-    if(!ServiceCode || !ServicedBy || !TransDate || !ResidentId){
+    if(!service_code || !username || !trans_date || !resident_id){
       throw new ErrorWithHttpStatus('Missing Properties', 400);
     }
     const pool = await db.connect(`${process.env.DATABASE_URL}`);
-    let idInput = shortid.generate();
+    // let idInput = shortid.generate();
     let dateRequest = await pool.request().query('SELECT getdate();'); 
     // Destructure date
     let dateInput =  Object.values(dateRequest.recordset[0])[0];
 
     // Create Transaction
     await pool.request()
-      .input('id', db.NVarChar(100), idInput)
+      // .input('id', db.NVarChar(100), idInput)
       .input('createTime', dateInput)
-      .input('transDate', db.NVarChar(100), TransDate)
-      .input('serviceCode', db.NVarChar(100), ServiceCode)
-      .input('servicedBy', db.NVarChar(100), ServicedBy)
-      .input('resId', db.NVarChar(100), ResidentId)
-      .query(`INSERT INTO dbo.transactions (id, created_date, updated_date, service_code, username, trans_date,  resident_id) VALUES (@id, @createTime, @createTime, @serviceCode, @servicedBy, @transDate, @resId);`);
+      .input('transDate', db.NVarChar(100), trans_date)
+      .input('serviceCode', db.NVarChar(100), service_code)
+      .input('servicedBy', db.NVarChar(100), username)
+      .input('resId', db.NVarChar(100), resident_id)
+      .query(`INSERT INTO dbo.transactions ( created_date, service_code, username, trans_date,  resident_id) VALUES ( @createTime, @serviceCode, @servicedBy, @transDate, @resId);`);
     
     // Get created Transaction
     let result = await pool.request()
-      .input('id', db.NVarChar(100), idInput)
-      .query( `SELECT * FROM dbo.transactions WHERE id = @id`);
+      .input('transDate', db.NVarChar(100), trans_date)
+      .input('serviceCode', db.NVarChar(100), service_code)
+      .input('servicedBy', db.NVarChar(100), username)
+      .input('resId', db.NVarChar(100), resident_id)
+      .query( `SELECT TOP 1 * FROM dbo.transactions WHERE trans_date = @transDate AND service_code = @serviceCode AND username = @servicedBy AND resident_id = @resId ORDER BY created_date DESC`);
     
     db.close();
     return result.recordset;
@@ -123,11 +126,17 @@ exports.update = async (id, newData) => {
     var params = [];
     // Handle Update Time Input
     reqPool.input('updateTime', dateInput);
-    params.push(`_updatedAt = @updateTime`);
+    params.push(`updated_date = @updateTime`);
     // Handle inputs from body
     for(var i = 1; i <= keys.length ; i++) {
-      params.push(keys[i-1] + ` = @` + (i));
-      reqPool.input(i, values[i-1]);
+      // Handle Data coming in
+      console.log(keys[i-1]);
+      if (keys[i-1] == 'service_code' || keys[i-1] == 'username' || keys[i-1] == 'trans_date' || keys[i-1] == 'resident_id' ) {
+        params.push(keys[i-1] + ` = @` + (i));
+        reqPool.input(i, values[i-1]);
+      } else {
+        throw new ErrorWithHttpStatus('Invalid data', 400);
+      }
     }
     // Handle ID input
     reqPool.input('id', db.NVarChar(100), id);
