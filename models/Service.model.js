@@ -38,12 +38,12 @@ exports.insert = async ({ServiceCode, ServiceName }) => {
       .input('createTime', dateInput)
       .input('serviceCode', db.NVarChar(100), ServiceCode)
       .input('serviceName', db.NVarChar(100), ServiceName)
-      .query(`INSERT INTO dbo.service (_id, _createdAt, _updatedAt, ServiceCode, ServiceName) VALUES (@id, @createTime, @createTime, @serviceCode, @serviceName);`);
+      .query(`INSERT INTO dbo.services (id, created_date, updated_date, service_code, service_name) VALUES (@id, @createTime, @createTime, @serviceCode, @serviceName);`);
     
     // Get created Service
     let result = await pool.request()
       .input('id', db.NVarChar(100), idInput)
-      .query( `SELECT * FROM dbo.service WHERE _id = @id`);
+      .query( `SELECT * FROM dbo.services WHERE id = @id`);
     
     db.close();
     return result.recordset;
@@ -79,7 +79,7 @@ exports.select = async ( query = {} ) => {
       .join(' AND ');
     // Handle Format String
     const formattedSelect = format(
-      `SELECT * FROM dbo.service ${clauses.length ? `WHERE ${clauses}` : ''}`,
+      `SELECT * FROM dbo.services ${clauses.length ? `WHERE ${clauses}` : ''}`,
       ...Object.keys(query)  
     );
     // Pass in Query
@@ -119,7 +119,7 @@ exports.update = async (id, newData) => {
     var params = [];
     // Handle Update Time Input
     reqPool.input('updateTime', dateInput);
-    params.push(`_updatedAt = @updateTime`);
+    params.push(`updated_date = @updateTime`);
     // Handle inputs from body
     for(var i = 1; i <= keys.length ; i++) {
       params.push(keys[i-1] + ` = @` + (i));
@@ -128,14 +128,14 @@ exports.update = async (id, newData) => {
     // Handle ID input
     reqPool.input('id', db.NVarChar(100), id);
 
-    var queryText = `UPDATE dbo.service SET ` + params.join(', ') + ` WHERE _id = @id;`;
+    var queryText = `UPDATE dbo.services SET ` + params.join(', ') + ` WHERE id = @id;`;
     
     await reqPool.query(queryText);
 
     // Get updated Service
     let result = await pool.request()
       .input('id', db.NVarChar(100), id)
-      .query( `SELECT * FROM dbo.service WHERE _id = @id`);
+      .query( `SELECT * FROM dbo.services WHERE id = @id`);
 
     db.close();
     return result.recordset;
@@ -160,14 +160,14 @@ exports.delete = async id => {
     // Get created Service
     let result = await pool.request()
       .input('id', db.NVarChar(100), id)
-      .query( `SELECT * FROM dbo.service WHERE _id = @id`);
+      .query( `SELECT * FROM dbo.services WHERE id = @id`);
     
     if (result.recordset.length == 0) {
       throw new ErrorWithHttpStatus('ID Does not exist', 400);
     }
     await pool.request()
       .input('id', db.NVarChar(100), id)
-      .query(`DELETE FROM dbo.service WHERE _id = @id`);
+      .query(`DELETE FROM dbo.services WHERE id = @id`);
     db.close(); 
     return result.recordset[0];
   } catch (err) {
