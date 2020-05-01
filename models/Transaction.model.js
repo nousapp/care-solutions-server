@@ -168,7 +168,6 @@ exports.update = async (id, newData) => {
     // Handle inputs from body
     for(var i = 1; i <= keys.length ; i++) {
       // Handle Data coming in
-      console.log(keys[i-1]);
       if (keys[i-1] == 'service_code' || keys[i-1] == 'username' || keys[i-1] == 'trans_date' || keys[i-1] == 'resident_id' ) {
         params.push(keys[i-1] + ` = @` + (i));
         reqPool.input(i, values[i-1]);

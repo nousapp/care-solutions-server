@@ -20,35 +20,36 @@ const db = require('mssql');
  * @param {Service} newService - the data to create the Service with
  * @returns {Promise<Service>} the created Service
  */
-exports.insert = async ({ServiceCode, ServiceName }) => {
+exports.insert = async ({service_code, service_name }) => {
   try {
     // Checks if all inputs are in request
-    if(!ServiceCode || !ServiceName){
+    if(!service_code || !service_name){
       throw new ErrorWithHttpStatus('Missing Properties', 400);
     }
     const pool = await db.connect(`${process.env.DATABASE_URL}`);
-    let idInput = shortid.generate();
     let dateRequest = await pool.request().query('SELECT getdate();'); 
     // Destructure date
     let dateInput =  Object.values(dateRequest.recordset[0])[0];
 
     // Create Service
     await pool.request()
-      .input('id', db.NVarChar(100), idInput)
       .input('createTime', dateInput)
-      .input('serviceCode', db.NVarChar(100), ServiceCode)
-      .input('serviceName', db.NVarChar(100), ServiceName)
-      .query(`INSERT INTO dbo.services (id, created_date, updated_date, service_code, service_name) VALUES (@id, @createTime, @createTime, @serviceCode, @serviceName);`);
+      .input('serviceCode', db.NVarChar(100), service_code)
+      .input('serviceName', db.NVarChar(100), service_name)
+      .query(`INSERT INTO dbo.services (created_date, service_code, service_name) VALUES ( @createTime, @serviceCode, @serviceName);`);
     
     // Get created Service
     let result = await pool.request()
-      .input('id', db.NVarChar(100), idInput)
-      .query( `SELECT * FROM dbo.services WHERE id = @id`);
+      .input('serviceCode', db.NVarChar(100), service_code)
+      .input('serviceName', db.NVarChar(100), service_name)
+      .query( `SELECT TOP 1 * FROM dbo.services WHERE service_code = @serviceCode AND service_name = @serviceName ORDER BY created_date DESC`);
+    
     
     db.close();
     return result.recordset;
   } catch (err) {
     db.close();
+    console.log(err);
     if (err instanceof ErrorWithHttpStatus) throw err;
     else throw new ErrorWithHttpStatus('Database Error', 500);
   }
@@ -122,8 +123,13 @@ exports.update = async (id, newData) => {
     params.push(`updated_date = @updateTime`);
     // Handle inputs from body
     for(var i = 1; i <= keys.length ; i++) {
-      params.push(keys[i-1] + ` = @` + (i));
-      reqPool.input(i, values[i-1]);
+      // Checks Data coming in
+      if (keys[i-1] == 'service_code' || keys[i-1] == 'service_name' ) {
+        params.push(keys[i-1] + ` = @` + (i));
+        reqPool.input(i, values[i-1]);
+      } else {
+        throw new ErrorWithHttpStatus('Invalid data', 400);
+      }
     }
     // Handle ID input
     reqPool.input('id', db.NVarChar(100), id);
